@@ -94,4 +94,7 @@ dependencies {
     //GSON converter
     implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
 
+
+    implementation ("androidx.compose.runtime:runtime:1.6.4") // replace with your version
+
 }

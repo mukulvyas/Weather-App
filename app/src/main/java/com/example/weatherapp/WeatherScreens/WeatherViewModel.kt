@@ -22,18 +22,24 @@ class WeatherViewModel @Inject constructor(private val repository: Repository): 
         )
     )
 
-    init {
-        getAllWeatherDetails() // get all weather details
-    }
+//    init {
+//        getAllWeatherDetails() // get all weather details
+//    }
 
-    fun getAllWeatherDetails(){
+    fun getAllWeatherDetails(text: String){
 
         viewModelScope.launch {
+            data.value = WeatherDataOrException(
+                null,
+                true,
+                Exception(""))
             data.value.loading = true
-            data.value = repository.getWeatherData("2024-01-13")
+            data.value = repository.getWeatherData(text)
             if (data.value.data.toString().isNotEmpty()) {
                 data.value.loading = false
             }
+
+
         }
 
     }
