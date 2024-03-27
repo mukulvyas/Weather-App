@@ -22,4 +22,5 @@ class Repository @Inject constructor(private val weatherAPI: WeatherAPI) {
         return weatherData
 }
 
+
 }

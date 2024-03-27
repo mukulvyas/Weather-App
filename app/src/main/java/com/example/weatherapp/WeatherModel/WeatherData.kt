@@ -1,6 +1,10 @@
 package com.example.weatherapp.WeatherModel
 
+
+
+
 data class WeatherData(
+
     val address: String,
     val days: List<Day>,
     val latitude: Double,
