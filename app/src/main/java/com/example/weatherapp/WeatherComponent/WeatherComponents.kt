@@ -1,6 +1,7 @@
 package com.example.weatherapp.WeatherComponent
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,9 @@ import androidx.compose.ui.unit.sp
 import com.example.weatherapp.WeatherModel.DayTable
 import com.example.weatherapp.WeatherScreens.WeatherViewModel
 import com.example.weatherapp.weatherUtlis.WeatherAppColor
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 @Composable
 fun WeatherDetails(viewModel: WeatherViewModel) {
@@ -72,6 +76,7 @@ fun WeatherAppDetails(viewModel: WeatherViewModel) {
     val setDisplayWeather = remember { mutableStateOf(false) }
     val isFromApi = remember { mutableStateOf(false) }
     val isFromDB = remember { mutableStateOf(false) }
+    val isResult = remember { mutableStateOf(false) }
     val one = remember { mutableStateOf(DayTable("",0.0,0.0,0.0)) }
     Scaffold(
         topBar = {
@@ -98,7 +103,7 @@ fun WeatherAppDetails(viewModel: WeatherViewModel) {
                     horizontalAlignment = Alignment.Start
                 ){
 
-                    CreatingTextBox(viewModel,setDisplayWeather,isFromDB,isFromApi,one)
+                    CreatingTextBox(viewModel,setDisplayWeather,isFromDB,isFromApi,isResult,one)
                     Log.d("Actual One", "one: $one " )
 
 //                    PrintWeatherDetails(DayTable("",0.0,0.0,0.0))
@@ -111,6 +116,13 @@ fun WeatherAppDetails(viewModel: WeatherViewModel) {
                         PrintWeatherDetails(one.value)
                     }
 
+
+                    }
+                    if(isResult.value){
+                        Surface(modifier = Modifier.padding(5.dp)) {
+                            Text(text ="Please Enter a valid Date in YYYY-MM-DD format",
+                                color = Color.Red,)
+                        }
                     }
 
                    // DisplayWeatherContent(viewModel)
@@ -128,11 +140,12 @@ fun CreatingTextBox(
     setDisplayWeather: MutableState<Boolean>,
     isFromDB: MutableState<Boolean>,
     isFromApi: MutableState<Boolean>,
+    isResult: MutableState<Boolean>,
     one: MutableState<DayTable>
 ) {
     val listDB = viewModel.weatherList.collectAsState().value
     val text = remember { mutableStateOf("") }
-
+    //var isResult = false
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = WeatherAppColor.mOffWhite,
@@ -151,7 +164,7 @@ fun CreatingTextBox(
 
             Button(
                 onClick = {
-                    if (text.value.isNotEmpty()) {
+                    if (text.value.isNotEmpty() && isValidDateFormat(text.value)) {
                         val matchingEntry = listDB.find { it.datetime == text.value }
                         if (matchingEntry != null) {
                             isFromDB.value = true
@@ -162,6 +175,11 @@ fun CreatingTextBox(
                         }
                         text.value = "" // Reset the text field
                         setDisplayWeather.value = true
+
+                    }
+                    else{
+                        isResult.value = true
+                        text.value = ""
                     }
                 },
                 modifier = Modifier.padding(20.dp),
@@ -169,7 +187,25 @@ fun CreatingTextBox(
             ) {
                 Text(text = "Get Weather Details")
             }
+
+
         }
+    }
+}
+
+fun isValidDateFormat(text: String): Boolean {
+    val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    return try {
+        // Attempt to parse the text into a LocalDate object
+        val parsedDate = LocalDate.parse(text, dateFormatter)
+        // Check if the parsed date matches the original input (to handle cases like February 31st)
+        val inputDateParts = text.split("-")
+        parsedDate.year == inputDateParts[0].toInt() &&
+                parsedDate.monthValue == inputDateParts[1].toInt() &&
+                parsedDate.dayOfMonth == inputDateParts[2].toInt()
+    } catch (e: DateTimeParseException) {
+        // If parsing fails, return false
+        false
     }
 }
 
