@@ -27,7 +27,7 @@ class Repository @Inject constructor(private val weatherAPI: WeatherAPI, private
         return weatherData
 }
 
-    fun addWeather(day: DayTable) = weatherDatabaseDao.insert(day)
+    suspend fun addWeather(day: DayTable) = weatherDatabaseDao.insert(day)
 
 
     suspend fun updateWeather(day: DayTable) = weatherDatabaseDao.update(day)

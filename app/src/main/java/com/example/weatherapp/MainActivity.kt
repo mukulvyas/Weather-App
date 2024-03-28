@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
                     val weatherViewModel = viewModels<WeatherViewModel>()
 
                     WeatherHomeApp()
-                    DisplayDatabase(weatherViewModel)
+                    //Log.d("DisplayDatabase", "DisplayDatabase: ${weatherViewModel.value.weatherList.collectAsState().value }")
 
                 }
             }
@@ -39,12 +39,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun DisplayDatabase(weatherViewModel: Lazy<WeatherViewModel>) {
-
-    val weathersList = weatherViewModel.value.weatherList.collectAsState().value
-    Log.d("DisplayDatabase", "DisplayDatabase: $weathersList")
-}
+//@Composable
+//fun DisplayDatabase(weatherViewModel: List<WeatherViewModel>) {
+//
+//    val weathersList = weatherViewModel.value.weatherList.collectAsState().value
+//    Log.d("DisplayDatabase", "DisplayDatabase: ${weatherViewModel.weatherList.collectAsState().value }")
+//}
 
 
 

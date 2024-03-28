@@ -17,17 +17,17 @@ interface WeatherDatabaseDao {
             Flow<List<DayTable>>
 
     @Query("SELECT * FROM Day_tbl WHERE datetime = :datetime")
-    fun getDay(datetime: String): DayTable
+    suspend fun getDay(datetime: String): DayTable
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(day: DayTable)
+    suspend fun insert(day: DayTable)
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
-    fun update(day: DayTable)
+    suspend fun update(day: DayTable)
 
     @Query("DELETE FROM Day_tbl")
-    fun deleteAll()
+    suspend fun deleteAll()
 
     @Delete
-    fun deleteWeather(day: DayTable)
+    suspend fun deleteWeather(day: DayTable)
 }
