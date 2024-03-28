@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.weatherapp.WeatherModel.DayTable
 import com.example.weatherapp.WeatherScreens.WeatherViewModel
 import com.example.weatherapp.weatherUtlis.WeatherAppColor
 
@@ -127,16 +128,21 @@ fun CreatingTextBox(viewModel: WeatherViewModel, setDisplayWeather: MutableState
 
             Button(
                 onClick = {
-                    viewModel.getAllWeatherDetails(text.value)
-                    text.value = ""
-                    setDisplayWeather.value = true
-
-
+                    if (text.value.isNotEmpty()) {
+                        viewModel.getAllWeatherDetails(text.value)
+                        text.value = ""
+                        setDisplayWeather.value = true
+                        //viewModel.addWeather(DayTable(viewModel.data.value.data?.days?.get(0)?.datetime.toString(), viewModel.data.value.data?.days?.get(0)?.tempmin!!.toDouble(), viewModel.data.value.data?.days?.get(0)?.tempmax!!.toDouble(), viewModel.data.value.data?.days?.get(0)?.temp!!.toDouble()))
+                        //Log.d("DB","${viewModel.addWeather(DayTable(viewModel.data.value.data?.days?.get(0)?.datetime.toString(), viewModel.data.value.data?.days?.get(0)?.tempmin!!.toDouble(), viewModel.data.value.data?.days?.get(0)?.tempmax!!.toDouble(), viewModel.data.value.data?.days?.get(0)?.temp!!.toDouble()))}")
+                        //Log.d("Da"viewModel.addWeather(viewModel.data.value.data?.days?.get(0)!!))
+                    }
                 },
-                modifier = Modifier.padding(20.dp)
+                modifier = Modifier.padding(20.dp),
+                enabled = text.value.isNotEmpty() // Disable the button if text.value is empty
             ) {
                 Text(text = "Get Weather Details")
             }
+
 
 
         }

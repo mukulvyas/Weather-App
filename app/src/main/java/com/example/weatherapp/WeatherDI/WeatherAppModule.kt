@@ -21,7 +21,9 @@ import javax.inject.Singleton
 object WeatherAppModule {
     @Singleton
     @Provides
-    fun provideRepository(WeatherAPI: WeatherAPI): Repository = Repository(WeatherAPI)
+
+    fun provideRepository(WeatherAPI: WeatherAPI, weatherDatabaseDao: WeatherDatabaseDao): Repository = Repository(WeatherAPI, weatherDatabaseDao)
+    //fun provideRepository(WeatherAPI: WeatherAPI,weatherDatabase: WeatherDatabase): Repository = Repository(WeatherAPI, weatherDatabaseDao)
     @Singleton
     @Provides
     fun provideWeatherAPI(): WeatherAPI{
