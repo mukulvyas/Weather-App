@@ -1,7 +1,6 @@
 package com.example.weatherapp.WeatherComponent
 
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +38,7 @@ import com.example.weatherapp.weatherUtlis.WeatherAppColor
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import kotlin.math.log
 
 @Composable
 fun WeatherDetails(viewModel: WeatherViewModel) {
@@ -74,6 +74,7 @@ fun WeatherDetails(viewModel: WeatherViewModel) {
 @Composable
 fun WeatherAppDetails(viewModel: WeatherViewModel) {
     val setDisplayWeather = remember { mutableStateOf(false) }
+    val isFromMultipleApi = remember { mutableStateOf(false) }
     val isFromApi = remember { mutableStateOf(false) }
     val isFromDB = remember { mutableStateOf(false) }
     val isResult = remember { mutableStateOf(false) }
@@ -103,27 +104,37 @@ fun WeatherAppDetails(viewModel: WeatherViewModel) {
                     horizontalAlignment = Alignment.Start
                 ){
 
-                    CreatingTextBox(viewModel,setDisplayWeather,isFromDB,isFromApi,isResult,one)
+                    CreatingTextBox(viewModel,setDisplayWeather,isFromMultipleApi,isFromDB,isFromApi,isResult,one)
                     Log.d("Actual One", "one: $one " )
-
+                    Log.d("MAKING", "PrintWeatherDetails: ${isFromApi.value}")
+                    Log.d("MAKING", "PrintWeatherDetails: ${isFromDB.value}")
+                    Log.d("MAKING", "PrintWeatherDetails: ${isFromMultipleApi.value}")
 //                    PrintWeatherDetails(DayTable("",0.0,0.0,0.0))
 
-                    if (isFromApi.value && isFromApi.value) {
+
+                    if (setDisplayWeather.value && isFromApi.value) {
                         DisplayWeatherContent(viewModel)
                     }
-                    else
-                    {   if(setDisplayWeather.value && isFromDB.value){
+                    else if(setDisplayWeather.value && isFromDB.value){
                         PrintWeatherDetails(one.value)
                     }
+                    else if(isFromMultipleApi.value){
+                        Log.d("MAKING", "PrintWeatherDetailsNEW: ENTER")
+
+                        MakingUI(viewModel)
 
 
                     }
+
                     if(isResult.value){
-                        Surface(modifier = Modifier.padding(5.dp)) {
+                        Surface(modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth()) {
                             Text(text ="Please Enter a valid Date in YYYY-MM-DD format",
                                 color = Color.Red,)
                         }
                     }
+
 
                    // DisplayWeatherContent(viewModel)
 
@@ -138,6 +149,7 @@ fun WeatherAppDetails(viewModel: WeatherViewModel) {
 fun CreatingTextBox(
     viewModel: WeatherViewModel,
     setDisplayWeather: MutableState<Boolean>,
+    isFromMultipleApi: MutableState<Boolean>,
     isFromDB: MutableState<Boolean>,
     isFromApi: MutableState<Boolean>,
     isResult: MutableState<Boolean>,
@@ -165,23 +177,34 @@ fun CreatingTextBox(
             Button(
                 onClick = {
                     if (text.value.isNotEmpty() && isValidDateFormat(text.value)) {
-                        val matchingEntry = listDB.find { it.datetime == text.value }
-                        if (matchingEntry != null) {
-                            isFromDB.value = true
-                            one.value = matchingEntry
-                        } else {
-                            viewModel.getAllWeatherDetails(text.value)
-                            isFromApi.value = true
-                        }
-                        text.value = "" // Reset the text field
-                        setDisplayWeather.value = true
+                        val currentDate = LocalDate.now()
+                        val enteredDate = LocalDate.parse(text.value, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-                    }
-                    else{
+                        if (enteredDate.isAfter(currentDate)) {
+                            val previousDates = getPreviousDatesWithSameMonthDay(enteredDate.toString())
+                            Log.d("PreviousDates", "PreviousDates: $previousDates")
+                            viewModel.getAllPreviousWeatherDetails(previousDates, text.value)
+
+                            isFromMultipleApi.value = true
+                            text.value = ""
+                        } else {
+                            val matchingEntry = listDB.find { it.datetime == text.value }
+                            if (matchingEntry != null) {
+                                isFromDB.value = true
+                                one.value = matchingEntry
+                            } else {
+                                viewModel.getAllWeatherDetails(text.value)
+                                isFromApi.value = true
+                            }
+                            text.value = "" // Reset the text field
+                            setDisplayWeather.value = true
+                        }
+                    } else {
                         isResult.value = true
                         text.value = ""
                     }
-                },
+                }
+                ,
                 modifier = Modifier.padding(20.dp),
                 enabled = text.value.isNotEmpty() // Disable the button if text is empty
             ) {
@@ -192,6 +215,23 @@ fun CreatingTextBox(
         }
     }
 }
+
+fun getPreviousDatesWithSameMonthDay(inputDate: String): List<String> {
+    val enteredYear = inputDate.substring(0, 4).toInt()
+    val enteredMonthDay = inputDate.substring(5)
+    val todayYear = 2024 // Assuming the current year is 2024
+
+    val previousDates = mutableListOf<String>()
+
+    for (i in 1..10) {
+        val previousYear = todayYear - i
+        val previousDate = "$previousYear-$enteredMonthDay"
+        previousDates.add(previousDate)
+    }
+
+    return previousDates
+}
+
 
 fun isValidDateFormat(text: String): Boolean {
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")

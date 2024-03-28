@@ -1,6 +1,8 @@
 package com.example.weatherapp.WeatherScreens
 
 import android.util.Log
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -16,6 +18,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.log
+import kotlin.time.Duration.Companion.days
 
 //@HiltViewModel
 //class WeatherViewModel @Inject constructor(private val repository: Repository): ViewModel(){
@@ -120,6 +124,78 @@ class WeatherViewModel @Inject constructor(private val repository: Repository): 
         //getAllWeatherDetails() // get all weather details
     }
 
+
+    fun getAllPreviousWeatherDetails(previousDates: List<String>, date: String): Triple<Double, Double, Double>{
+
+        val deferredWeatherDataList = mutableListOf<WeatherData>().toMutableList()
+        val mainList = mutableListOf<WeatherData>()
+        var totalTemp = 0.0
+        var totalTempMin = 0.0
+        var totalTempMax = 0.0
+        var count = 0
+
+
+
+        viewModelScope.launch {
+//            try {
+                data.value = WeatherDataOrException(null, true, Exception(""))
+                data.value.loading = true
+                //val deferredWeatherDataList = mutableListOf<Deferred<WeatherDataOrException>>()
+//                val deferredWeatherData = previousDates.map { date ->
+//                    async {
+//                        Log.d("EachWeatherAPI", "getAllPreviousWeatherDetails: $date")
+//                        val getAPI = repository.getWeatherData(date)
+//                        deferredWeatherDataList.add(getAPI.data!!)
+//                        Log.d("EachWeatherAPI", "getAllPreviousWeatherDetails: $getAPI.data!!")
+//                    }
+//                }
+//                Log.d("EachWeatherAPIMAIN", "getAllPreviousWeatherDetails: $deferredWeatherDataList")
+//
+//                // Await for all the API calls to complete
+//                val weatherDataList = deferredWeatherData.awaitAll()
+
+
+//                Log.d("Multiple API", "getAllPreviousWeatherDetails: $weatherDataList")
+
+
+                for (dateSecond in previousDates) {
+                    val getAPI = repository.getWeatherData(dateSecond)
+                    mainList.add(getAPI.data!!)
+
+                    Log.d("EachWeatherAPI", "getAllPreviousWeatherDetails: $getAPI.data!!")
+                }
+
+                for(weatherData in mainList) {
+                    weatherData.days.forEach {day ->
+
+                        totalTemp += day.temp
+                        totalTempMin += day.tempmin
+                        totalTempMax += day.tempmax
+                        count++
+
+                    }
+
+                    Log.d("EachYearAPIRequest", "EachYearAPIRequest:  $weatherData")
+                }
+                totalTemp /= count
+                totalTempMin /= count
+                totalTempMax /= count
+                Log.d("AverageResult", "getAllPreviousWeatherDetails:  total: $totalTemp min: $totalTempMin  max: $totalTempMax")
+                addWeather(DayTable(datetime = date.toString(), tempmin = totalTempMin, tempmax = totalTempMax, temp = totalTemp))
+
+
+
+
+//            } catch (e: Exception) {
+//                // Handle exceptions if any
+//                data.value = WeatherDataOrException(null, false, e)
+//            }
+        }
+        return Triple(totalTemp, totalTempMin, totalTempMax)
+
+    }
+
+
     fun getAllWeatherDetails(text: String) {
 
         viewModelScope.launch {
@@ -138,6 +214,7 @@ class WeatherViewModel @Inject constructor(private val repository: Repository): 
             addWeather(DayTable(datetime = data.value.data?.days?.get(0)?.datetime.toString(), tempmin = data.value.data?.days?.get(0)?.tempmin!!, tempmax = data.value.data?.days?.get(0)?.tempmax!!, temp = data.value.data?.days?.get(0)?.temp!!))
             //addWeather(DayTable("2022-10-10", 10.0, 20.0, 15.0))
             Log.d("DATABASE", "getAllWeatherDetails AFTER: ${data.value.data}")
+
 
 
         }
