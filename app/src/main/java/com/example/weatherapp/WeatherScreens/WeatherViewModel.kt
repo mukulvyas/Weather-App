@@ -99,6 +99,7 @@ class WeatherViewModel @Inject constructor(private val repository: Repository): 
 
     private val _weatherList = MutableStateFlow<List<DayTable>>(emptyList())
     val weatherList = _weatherList.asStateFlow()
+    val weatherStats: MutableState<Triple<Double, Double, Double>?> = mutableStateOf(null)
 
 
     val data: MutableState<WeatherDataOrException<WeatherData, Boolean, Exception>> = mutableStateOf(
@@ -125,7 +126,7 @@ class WeatherViewModel @Inject constructor(private val repository: Repository): 
     }
 
 
-    fun getAllPreviousWeatherDetails(previousDates: List<String>, date: String): Triple<Double, Double, Double>{
+   suspend fun getAllPreviousWeatherDetails(previousDates: List<String>, date: String): Triple<Double, Double, Double>{
 
         val deferredWeatherDataList = mutableListOf<WeatherData>().toMutableList()
         val mainList = mutableListOf<WeatherData>()
@@ -134,9 +135,6 @@ class WeatherViewModel @Inject constructor(private val repository: Repository): 
         var totalTempMax = 0.0
         var count = 0
 
-
-
-        viewModelScope.launch {
 //            try {
                 data.value = WeatherDataOrException(null, true, Exception(""))
                 data.value.loading = true
@@ -190,8 +188,22 @@ class WeatherViewModel @Inject constructor(private val repository: Repository): 
 //                // Handle exceptions if any
 //                data.value = WeatherDataOrException(null, false, e)
 //            }
-        }
+
         return Triple(totalTemp, totalTempMin, totalTempMax)
+
+    }
+
+    fun getALlResultPrevious(previousDates: List<String>, date: String){
+        viewModelScope.launch {
+            val (avgTemp, minTemp, maxTemp) = getAllPreviousWeatherDetails(previousDates, date)
+            //addWeather(DayTable(datetime = date, tempmin = minTemp.toDouble(), tempmax = maxTemp, temp = avgTemp))
+
+            // Use avgTemp, minTemp, and maxTemp...
+            weatherStats.value = Triple(avgTemp, minTemp, maxTemp)
+           // Log.d("GettingINFO", "CreatingTextBox: ${weatherStats.value}")
+
+
+        }
 
     }
 

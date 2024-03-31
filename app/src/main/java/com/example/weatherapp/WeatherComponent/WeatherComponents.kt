@@ -32,17 +32,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.getSystemService
 import com.example.weatherapp.WeatherModel.DayTable
 import com.example.weatherapp.WeatherScreens.WeatherViewModel
 import com.example.weatherapp.weatherUtlis.WeatherAppColor
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
-import kotlin.math.log
 
 @Composable
 fun WeatherDetails(viewModel: WeatherViewModel) {
-    val listDB = viewModel.weatherList.collectAsState().value
+    //val listDB = viewModel.weatherList.collectAsState().value
     Log.d("DisplayDB", "DisplayDatabase: ${viewModel.weatherList.collectAsState().value }")
 
     val minTemp = viewModel.data.value.data?.days?.get(0)?.tempmin
@@ -78,6 +78,9 @@ fun WeatherAppDetails(viewModel: WeatherViewModel) {
     val isFromApi = remember { mutableStateOf(false) }
     val isFromDB = remember { mutableStateOf(false) }
     val isResult = remember { mutableStateOf(false) }
+    val dateOne = remember {
+        mutableStateOf("")
+    }
     val one = remember { mutableStateOf(DayTable("",0.0,0.0,0.0)) }
     Scaffold(
         topBar = {
@@ -104,39 +107,35 @@ fun WeatherAppDetails(viewModel: WeatherViewModel) {
                     horizontalAlignment = Alignment.Start
                 ){
 
-                    CreatingTextBox(viewModel,setDisplayWeather,isFromMultipleApi,isFromDB,isFromApi,isResult,one)
+
+                    CreatingTextBox(viewModel,setDisplayWeather,isFromMultipleApi,isFromDB,isFromApi,isResult,one,dateOne)
                     Log.d("Actual One", "one: $one " )
                     Log.d("MAKING", "PrintWeatherDetails: ${isFromApi.value}")
                     Log.d("MAKING", "PrintWeatherDetails: ${isFromDB.value}")
                     Log.d("MAKING", "PrintWeatherDetails: ${isFromMultipleApi.value}")
 //                    PrintWeatherDetails(DayTable("",0.0,0.0,0.0))
 
+                        if (setDisplayWeather.value && isFromApi.value) {
+                            DisplayWeatherContent(viewModel)
+                        } else if(setDisplayWeather.value && isFromDB.value){
+                            PrintWeatherDetails(one.value)
+                        } else if(isFromMultipleApi.value){
 
-                    if (setDisplayWeather.value && isFromApi.value) {
-                        DisplayWeatherContent(viewModel)
-                    }
-                    else if(setDisplayWeather.value && isFromDB.value){
-                        PrintWeatherDetails(one.value)
-                    }
-                    else if(isFromMultipleApi.value){
-                        Log.d("MAKING", "PrintWeatherDetailsNEW: ENTER")
-
-                        MakingUI(viewModel)
-
-
-                    }
+                            Log.d("MAKING", "PrintWeatherDetailsNEW: ENTER")
+                            MakingUISecond(viewModel,dateOne.value)
+                        }
+//                        } else if(!isFromMultipleApi.value && !isFromDB.value && !isFromApi.value && !isResult.value){
+//                            PrintNewError()
+//                        }
 
                     if(isResult.value){
-                        Surface(modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth()) {
-                            Text(text ="Please Enter a valid Date in YYYY-MM-DD format",
-                                color = Color.Red,)
-                        }
+                        Log.d("entry","checking entry")
+
+                        PrintError()
                     }
 
 
-                   // DisplayWeatherContent(viewModel)
+                    // DisplayWeatherContent(viewModel)
 
                 }
             }
@@ -154,6 +153,7 @@ fun CreatingTextBox(
     isFromApi: MutableState<Boolean>,
     isResult: MutableState<Boolean>,
     one: MutableState<DayTable>
+    ,dateOne: MutableState<String>
 ) {
     val listDB = viewModel.weatherList.collectAsState().value
     val text = remember { mutableStateOf("") }
@@ -176,30 +176,42 @@ fun CreatingTextBox(
 
             Button(
                 onClick = {
+                    isFromMultipleApi.value = false
+                    isFromDB.value = false
+                    isFromApi.value = false
+                    isResult.value = false
                     if (text.value.isNotEmpty() && isValidDateFormat(text.value)) {
                         val currentDate = LocalDate.now()
                         val enteredDate = LocalDate.parse(text.value, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
-                        if (enteredDate.isAfter(currentDate)) {
+                        val matchingEntrySecond = listDB.find { it.datetime == text.value }
+                        if (enteredDate.isAfter(currentDate) && matchingEntrySecond == null) {
                             val previousDates = getPreviousDatesWithSameMonthDay(enteredDate.toString())
                             Log.d("PreviousDates", "PreviousDates: $previousDates")
-                            viewModel.getAllPreviousWeatherDetails(previousDates, text.value)
-
+                            viewModel.getALlResultPrevious(previousDates, text.value)
+                            val temp = viewModel.weatherStats.value?.first
+                            Log.d("GettingINFO", "avg temp: $temp")
                             isFromMultipleApi.value = true
+                            dateOne.value = text.value
                             text.value = ""
                         } else {
-                            val matchingEntry = listDB.find { it.datetime == text.value }
+                            val matchingEntry = listDB.find{ it.datetime == text.value }
                             if (matchingEntry != null) {
                                 isFromDB.value = true
                                 one.value = matchingEntry
                             } else {
+
                                 viewModel.getAllWeatherDetails(text.value)
+
+                                Log.d("GettingINFO", "CreatingTextBoxPast: ${viewModel.data.value.data?.address}")
+
                                 isFromApi.value = true
                             }
                             text.value = "" // Reset the text field
                             setDisplayWeather.value = true
                         }
                     } else {
+
+
                         isResult.value = true
                         text.value = ""
                     }
@@ -217,7 +229,7 @@ fun CreatingTextBox(
 }
 
 fun getPreviousDatesWithSameMonthDay(inputDate: String): List<String> {
-    val enteredYear = inputDate.substring(0, 4).toInt()
+    //val enteredYear = inputDate.substring(0, 4).toInt()
     val enteredMonthDay = inputDate.substring(5)
     val todayYear = 2024 // Assuming the current year is 2024
 
@@ -332,14 +344,118 @@ fun DisplayWeatherContent(viewModel: WeatherViewModel) {
 
 
             if (viewModel.data.value.loading == false) {
+                Log.d("OFFLINE", "PrintWeatherDetails: Entry")
                 MakingUI(viewModel)
 
             } else {
+                Log.d("Online", "PrintWeatherDetailsCircular: Entry ${viewModel.data.value.loading}")
+
                 CircularProgressIndicator()
+                Log.d("Online", "PrintWeatherDetailsCircular: Exit ${viewModel.data.value.loading}")
+
             }
         }
     }
 
+}
+
+@Composable
+fun MakingUISecond(viewModel: WeatherViewModel,dateOne: String){
+    val minTemp = String.format("%.2f", viewModel.weatherStats.value?.second)
+    val maxTemp = String.format("%.2f", viewModel.weatherStats.value?.third)
+    val temp = String.format("%.2f", viewModel.weatherStats.value?.first)
+    val address = "New Delhi"
+    val timeZone = "Asia/Kolkata"
+
+
+    Box(modifier = Modifier,
+        contentAlignment = Alignment.Center
+    )    {
+        Card(modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+            .padding(12.dp)
+        ) {
+
+            Surface(modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+                color = WeatherAppColor.mLightGray) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "$address ($timeZone)",
+                        fontWeight = FontWeight.Bold,
+                        textDecoration = TextDecoration.Underline,
+                        fontSize = 21.sp
+                    )
+                }
+
+
+                Column(
+                    modifier = Modifier.padding(top = 85.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally){
+                    Text(text = temp,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 40.sp
+                    )
+                }
+                Column(
+                    modifier = Modifier.padding(top = 150.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = dateOne,
+                        fontSize = 24.sp,
+                        fontFamily = FontFamily.Serif,
+                        //color = Color.Blue,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .padding(8.dp)
+                    )
+                }
+
+
+                Row(
+                    modifier = Modifier.padding(top = 212.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)){
+                        OutlinedTextField(
+                            value = minTemp,
+                            onValueChange = { },
+                            label = { Text("Minimum Temperature") },
+                            readOnly = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 5.dp, bottom = 5.dp),
+
+                            )
+
+                        OutlinedTextField(
+                            value = maxTemp,
+                            onValueChange = { /* No-op because it's read-only */ },
+                            label = { Text("Maximum Temperature") },
+                            readOnly = true, // Adjust padding as needed
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 5.dp, bottom = 5.dp)
+                        )
+                    }
+
+
+                }
+
+
+            }
+
+        }
+    }
+    Log.d("PRINTEATHER", "PrintWeatherDetails: EXIT")
 }
 
 @Composable
@@ -348,19 +464,19 @@ fun MakingUI(viewModel: WeatherViewModel){
     val minTemp = viewModel.data.value.data?.days?.get(0)?.tempmin
     val maxTemp = viewModel.data.value.data?.days?.get(0)?.tempmax
     val temp = viewModel.data.value.data?.days?.get(0)?.temp
-    val Date = viewModel.data.value.data?.days?.get(0)?.datetime
-    var Address = viewModel.data.value.data?.address
-    var TimeZone = viewModel.data.value.data?.timezone
-    val QueryCost = viewModel.data.value.data?.queryCost
-    val Latitude = viewModel.data.value.data?.latitude
-    val Longitude = viewModel.data.value.data?.longitude
-    val ResolvedAddress = viewModel.data.value.data?.resolvedAddress
-    val TZOffset = viewModel.data.value.data?.tzoffset
-    if (Address == null){
-        Address = "New Delhi"
+    val date = viewModel.data.value.data?.days?.get(0)?.datetime
+    var address = viewModel.data.value.data?.address
+    var timeZone = viewModel.data.value.data?.timezone
+    //val QueryCost = viewModel.data.value.data?.queryCost
+    //val Latitude = viewModel.data.value.data?.latitude
+    //val Longitude = viewModel.data.value.data?.longitude
+    //val ResolvedAddress = viewModel.data.value.data?.resolvedAddress
+    //val TZOffset = viewModel.data.value.data?.tzoffset
+    if (address == null){
+        address = "New Delhi"
     }
-    if (TimeZone == null){
-        TimeZone = "Asia/Kolkata"
+    if (timeZone == null){
+        timeZone = "Asia/Kolkata"
     }
 
     Surface(modifier = Modifier
@@ -372,7 +488,7 @@ fun MakingUI(viewModel: WeatherViewModel){
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "$Address ($TimeZone)",
+                text = "$address ($timeZone)",
                 fontWeight = FontWeight.Bold,
                 textDecoration = TextDecoration.Underline,
                 fontSize = 21.sp
@@ -393,7 +509,7 @@ fun MakingUI(viewModel: WeatherViewModel){
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "$Date",
+                text = "$date",
                 fontSize = 24.sp,
                 fontFamily = FontFamily.Serif,
                 //color = Color.Blue,
@@ -446,12 +562,12 @@ fun MakingUI(viewModel: WeatherViewModel){
 @Composable
 fun PrintWeatherDetails(entry: DayTable){
     Log.d("PRINTEATHER", "PrintWeatherDetails: Entry")
-    val minTemp = entry.tempmin
-    val maxTemp = entry.tempmax
-    val temp = entry.temp
-    val Date = entry.datetime
-    val Address = "New Delhi"
-    val TimeZone = "Asia/Kolkata"
+    val minTemp = String.format("%.2f",entry.tempmin)
+    val maxTemp = String.format("%.2f",entry.tempmax)
+    val temp = String.format("%.2f",entry.temp)
+    val date = entry.datetime
+    val address = "New Delhi"
+    val timeZone = "Asia/Kolkata"
 
 
     Box(modifier = Modifier,
@@ -472,7 +588,7 @@ fun PrintWeatherDetails(entry: DayTable){
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "$Address ($TimeZone)",
+                        text = "$address ($timeZone)",
                         fontWeight = FontWeight.Bold,
                         textDecoration = TextDecoration.Underline,
                         fontSize = 21.sp
@@ -493,7 +609,7 @@ fun PrintWeatherDetails(entry: DayTable){
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = Date,
+                        text = date,
                         fontSize = 24.sp,
                         fontFamily = FontFamily.Serif,
                         //color = Color.Blue,
@@ -535,6 +651,100 @@ fun PrintWeatherDetails(entry: DayTable){
 
 
                 }
+
+
+            }
+
+        }
+    }
+    Log.d("PRINTEATHER", "PrintWeatherDetails: EXIT")
+
+
+
+}
+
+
+@Composable
+fun PrintError(){
+    Log.d("PRINTEATHER", "PrintWeatherDetails: Entry")
+
+
+
+    Box(modifier = Modifier,
+        contentAlignment = Alignment.Center
+    )    {
+        Card(modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+            .padding(12.dp)
+        ) {
+
+            Surface(modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+                color = WeatherAppColor.mLightGray) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Log.d("PRINTEATHER", "PrintWeatherDetails: EXIT")
+                    Text(
+                        text ="Please Enter a valid Date in YYYY-MM-DD format",
+                            color = Color.Red,
+                        fontWeight = FontWeight.Bold,
+                        textDecoration = TextDecoration.Underline,
+                        fontSize = 21.sp
+                    )
+                }
+
+
+
+
+            }
+
+        }
+    }
+    Log.d("PRINTEATHER", "PrintWeatherDetails: EXIT")
+
+
+
+}
+
+
+@Composable
+fun PrintNewError(){
+    Log.d("PRINTEATHER", "PrintWeatherDetails: Entry")
+
+
+
+    Box(modifier = Modifier,
+        contentAlignment = Alignment.Center
+    )    {
+        Card(modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+            .padding(12.dp)
+        ) {
+
+            Surface(modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+                color = WeatherAppColor.mLightGray) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Log.d("PRINTEATHER", "PrintWeatherDetails: EXIT")
+                    Text(
+                        text ="We're unable to find your required data in the database or you are not connected to internet. Please try again or connect to internet.",
+                        color = Color.Red,
+                        fontWeight = FontWeight.Bold,
+                        textDecoration = TextDecoration.Underline,
+                        fontSize = 21.sp
+                    )
+                }
+
+
 
 
             }
